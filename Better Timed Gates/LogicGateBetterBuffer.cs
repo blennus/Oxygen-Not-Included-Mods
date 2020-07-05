@@ -56,7 +56,7 @@ namespace Better_Timed_Gates
 
       public float GetSliderMin(int index)
       {
-        return 15f;
+        return 0.2f;
       }
 
       public float GetSliderMax(int index)

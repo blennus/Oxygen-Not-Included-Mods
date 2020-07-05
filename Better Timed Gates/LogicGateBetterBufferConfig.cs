@@ -57,7 +57,7 @@ namespace Better_Timed_Gates
 
       public override BuildingDef CreateBuildingDef()
       {
-        return this.CreateBuildingDef("LogicGateBetterBuffer", "logic_buffer_kanim", 2, 1);
+        return this.CreateBuildingDef("LogicGateBetterBuffer", "logic_bbuffer_kanim", 2, 1);
       }
 
       public override void DoPostConfigureComplete(GameObject go)

@@ -1,4 +1,6 @@
 ﻿using Harmony;
+using System.Collections.Generic;
+using Database;
 using STRINGS;
 
 namespace Creature_Motion_Sensor
@@ -42,6 +44,17 @@ namespace Creature_Motion_Sensor
 
                 Debug.Log("Creature Motion Detector Loaded into Automation Building Planning Pane");
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(Db), "Initialize")]
+    public class LogicCreatureSensorDBPatch
+    {
+        public static void Prefix()
+        {
+            List<string> techgroupinglist = new List<string>(Techs.TECH_GROUPING["AnimalControl"]) { LogicCreatureSensorConfig.ID };
+            Techs.TECH_GROUPING["AnimalControl"] = techgroupinglist.ToArray();
+            Debug.Log("Creature Motion Detector Loaded into Tech Tree");
         }
     }
 }

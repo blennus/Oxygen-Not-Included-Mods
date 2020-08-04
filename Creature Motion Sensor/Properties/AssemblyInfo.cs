@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Creature_Motion_Detector")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Blennus Tech")]
 [assembly: AssemblyProduct("Creature_Motion_Detector")]
 [assembly: AssemblyCopyright("Copyright ©  2020")]
 [assembly: AssemblyTrademark("")]
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.8.2.23")]
-[assembly: AssemblyFileVersion("0.8.2.23")]
+[assembly: AssemblyVersion("0.8.2.24")]
+[assembly: AssemblyFileVersion("0.8.2.24")]

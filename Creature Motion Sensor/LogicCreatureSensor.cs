@@ -2,19 +2,22 @@
 // Assembly: Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
 // MVID: A8D8CAFB-CD16-4CDA-9F47-7D36796BFC75
 // Assembly location: E:\Games\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp.dll
+// Some Code copied from  Cairath Motion sensor range Mod
 
+using Creature_Motion_Sensor;
 using KSerialization;
 using STRINGS;
+using Harmony;
 using System.Collections.Generic;
 
 [SerializationConfig(MemberSerialization.OptIn)]
-public class LogicCreatureSensor : Switch, ISim1000ms, ISim200ms //IIntSliderControl, ISliderControl, 
+public class LogicCreatureSensor : Switch, IIntSliderControl, ISliderControl, ISim1000ms, ISim200ms
 {
   public static TagBits tagBits = new TagBits(new Tag[1]
   {
     GameTags.CreatureBrain
   });
-  public int pickupRange = 4;
+  public int pickupRange = 5;
   private List<Pickupable> creatures = new List<Pickupable>();
   private List<int> reachableCells = new List<int>(100);
   [MyCmpGet]
@@ -26,8 +29,10 @@ public class LogicCreatureSensor : Switch, ISim1000ms, ISim200ms //IIntSliderCon
   private bool pickupablesDirty;
   private Extents pickupableExtents;
 
+  [MyCmpGet]
+  private readonly StationaryChoreRangeVisualizer choreRangeVisualizer;
 
-    /*public string SliderTitleKey
+    public string SliderTitleKey
     {
         get
         {
@@ -60,29 +65,34 @@ public class LogicCreatureSensor : Switch, ISim1000ms, ISim200ms //IIntSliderCon
 
     public float GetSliderValue(int index)
     {
-        return this.pickupRange + 1;
+        return this.pickupRange;
     }
 
     public void SetSliderValue(float value, int index)
     {
-        this.pickupRange = (int)((value - 1)/2f)*2;
+        int newRange = (int)((value + 1) / 2f) * 2 - 1;
+        if (this.pickupRange == newRange)
+            return;
+        this.pickupRange = newRange;
         this.RefreshReachableCells();
+        this.RefreshVisualCells();
     }
 
     public string GetSliderTooltipKey(int index)
     {
-        return "Will send a " + UI.FormatAsAutomationState("Green Signal", UI.AutomationState.Active) + " if there is a critter withing <b>{0}</b> meters.";
+        return string.Format(TechAndPlanPatches.LogicCreatureSensorBuildingPlanPatch.CSENSOROUTPUT_TOOLTIP.text, this.pickupRange);
     }
 
     string ISliderControl.GetSliderTooltip()
     {
-        return string.Format((string)Strings.Get("Will send a " + UI.FormatAsAutomationState("Green Signal", UI.AutomationState.Active) + " if there is a critter withing <b>{0}</b> meters."), (object)this.pickupRange + 1);
+        return string.Format(TechAndPlanPatches.LogicCreatureSensorBuildingPlanPatch.CSENSOROUTPUT_TOOLTIP.text, this.pickupRange);
     }
     protected override void OnPrefabInit()
   {
     base.OnPrefabInit();
     this.simRenderLoadBalance = true;
-  }*/
+  }
+
 
   protected override void OnSpawn()
   {
@@ -92,18 +102,7 @@ public class LogicCreatureSensor : Switch, ISim1000ms, ISim200ms //IIntSliderCon
     this.UpdateVisualState(true);
     this.RefreshReachableCells();
     this.wasOn = this.switchedOn;
-    Vector2I xy = Grid.CellToXY(this.NaturalBuildingCell());
-    int cell = Grid.XYToCell(xy.x, xy.y + this.pickupRange / 2);
-    CellOffset offset = new CellOffset(0, this.pickupRange / 2);
-    if ((bool) (UnityEngine.Object) this.rotatable)
-    {
-      CellOffset rotatedCellOffset = this.rotatable.GetRotatedCellOffset(offset);
-      if (Grid.IsCellOffsetValid(this.NaturalBuildingCell(), rotatedCellOffset))
-        cell = Grid.OffsetCell(this.NaturalBuildingCell(), rotatedCellOffset);
-    }
-    this.pickupableExtents = new Extents(cell, this.pickupRange / 2);
-    this.pickupablesChangedEntry = GameScenePartitioner.Instance.Add("CreatureSensor.PickupablesChanged", (object) this.gameObject, this.pickupableExtents, GameScenePartitioner.Instance.pickupablesChangedLayer, new System.Action<object>(this.OnPickupablesChanged));
-    this.pickupablesDirty = true;
+    this.RefreshVisualCells();
   }
 
   protected override void OnCleanUp()
@@ -116,12 +115,37 @@ public class LogicCreatureSensor : Switch, ISim1000ms, ISim200ms //IIntSliderCon
   public void Sim1000ms(float dt)
   {
     this.RefreshReachableCells();
+    if (this.choreRangeVisualizer.width == this.pickupRange)
+        return;
+    this.RefreshVisualCells();
   }
 
   public void Sim200ms(float dt)
   {
     this.RefreshPickupables();
   }
+  private void RefreshVisualCells()
+  {
+    this.choreRangeVisualizer.x = -this.pickupRange / 2;
+    this.choreRangeVisualizer.y = 0;
+    this.choreRangeVisualizer.width = this.pickupRange;
+    this.choreRangeVisualizer.height = this.pickupRange;
+    if (selectable.IsSelected)
+        Traverse.Create(choreRangeVisualizer).Method("UpdateVisualizers").GetValue();
+    Vector2I xy = Grid.CellToXY(this.NaturalBuildingCell());
+    int cell = Grid.XYToCell(xy.x, xy.y + this.pickupRange / 2);
+    CellOffset offset = new CellOffset(0, this.pickupRange / 2);
+    if ((bool)(UnityEngine.Object)this.rotatable)
+    {
+        CellOffset rotatedCellOffset = this.rotatable.GetRotatedCellOffset(offset);
+        if (Grid.IsCellOffsetValid(this.NaturalBuildingCell(), rotatedCellOffset))
+            cell = Grid.OffsetCell(this.NaturalBuildingCell(), rotatedCellOffset);
+    }
+    this.pickupableExtents = new Extents(cell, this.pickupRange / 2);
+    GameScenePartitioner.Instance.Free(ref this.pickupablesChangedEntry);
+    this.pickupablesChangedEntry = GameScenePartitioner.Instance.Add("CreatureSensor.PickupablesChanged", (object)this.gameObject, this.pickupableExtents, GameScenePartitioner.Instance.pickupablesChangedLayer, new System.Action<object>(this.OnPickupablesChanged));
+    this.pickupablesDirty = true;
+    }
 
   private void RefreshReachableCells()
   {
@@ -153,7 +177,7 @@ public class LogicCreatureSensor : Switch, ISim1000ms, ISim200ms //IIntSliderCon
       }
     }
     pooledList.Recycle();
-  }
+    }
 
   public bool IsCellReachable(int cell)
   {
